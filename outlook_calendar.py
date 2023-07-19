@@ -1,6 +1,7 @@
 import os
 import requests
 import time
+import json
 from datetime import datetime
 from openpyxl import load_workbook
 
@@ -30,22 +31,33 @@ def add_event_to_calendar(event_body):
         print(f"An error occurred: {e}")
 
 def convert_to_iso_format(date_str):
+    # Try parsing the date string with different formats
+    dt_object = None
+    formats_to_try = ['%d/%m/%Y',
+                    #    '%Y-%m-%d',
+                    #    '%d-%m-%Y',
+                    '%Y-%d-%m %H:%M:%S']
+    for date_format in formats_to_try:
         try:
-            # Parse the date string into a datetime object
-            dt_object = datetime.strptime(str(date_str), '%d/%m/%Y')
-
-            # Set the time to 5 AM
-            dt_object = dt_object.replace(hour=5, minute=0, second=0, microsecond=0)
-
-            # Format the datetime object into ISO 8601 format
-            iso_date_str = dt_object.isoformat()
-            return iso_date_str
+            dt_object = datetime.strptime(str(date_str), date_format)
+            break
         except ValueError:
-            return None
+            continue
+
+    if dt_object is None:
+        raise ValueError("Invalid date format")
+        # return None
+
+    # Set the time to 5 AM
+    dt_object = dt_object.replace(hour=5, minute=0, second=0, microsecond=0)
+
+    # Format the datetime object into ISO 8601 format
+    iso_date_str = dt_object.isoformat()
+    return iso_date_str
 
 if __name__ == "__main__":
     # Load the Excel file
-    wb = load_workbook("dates.xlsx")
+    wb = load_workbook("dates-3.xlsx")
     sheet = wb.active
     events_list = []
 
@@ -73,10 +85,15 @@ if __name__ == "__main__":
                     }
                 }
                 events_list.append(event_body)
+                # break
             else:
-                print("failed iso")
+                print("\nfailed iso\n")
 
-    print(events_list)
+    # Convert the events_list to a JSON string with indentation for readability
+    events_json_str = json.dumps(events_list, indent=4)
+
+    # Print the JSON in a nice format
+    print(events_json_str)
     for event in events_list:
         add_event_to_calendar(event)
         time.sleep(0.2)
