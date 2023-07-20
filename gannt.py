@@ -1,36 +1,69 @@
-import win32com.client as win32
+from openpyxl import load_workbook
+from datetime import datetime
 
-def create_gantt_chart():
-    # Create an instance of the Microsoft Project application
-    app = win32.Dispatch("C:\Program Files\Microsoft Office\Office15\WINPROJ.Application")
+def convert_to_iso_format(date_str):
+    # Try parsing the date string with different formats
+    dt_object = None
+    formats_to_try = ['%d/%m/%Y',
+                    #    '%Y-%m-%d',
+                    #    '%d-%m-%Y',
+                    '%Y-%d-%m %H:%M:%S']
+    for date_format in formats_to_try:
+        try:
+            dt_object = datetime.strptime(str(date_str), date_format)
+            # date_obj = datetime.strptime(str(date_str), '%d/%m/%Y')
+            break
+        except ValueError:
+            continue
 
-    # Create a new project
-    project = app.NewProject
+    if dt_object is None:
+        # raise ValueError("Invalid date format")
+        return None
 
-    # Set the start date of the project
-    project.StartDate = "09/06/2023"  # Format: MM/DD/YYYY
+    # Set the time to 5 AM
+    new_date_str = dt_object.strftime('%m/%d/%Y')
+    # dt_object = dt_object.replace(hour=5, minute=0, second=0, microsecond=0)
 
-    # Add tasks to the project
-    task1 = project.Tasks.Add("Task 1")
-    task1.Start = "09/06/2023"
-    task1.Duration = "5d"  # 5 days
+    # Format the datetime object into ISO 8601 format
+    # iso_date_str = dt_object.isoformat()
+    return new_date_str
 
-    task2 = project.Tasks.Add("Task 2")
-    task2.Start = "09/11/2023"
-    task2.Duration = "3d"  # 3 days
+def convert_date_format(input_file):
+    # Open the Excel file using openpyxl
+    wb = load_workbook(input_file)
+    ws = wb.active
 
-    # Create a Gantt chart view
-    view = project.Views.Add("Gantt Chart", view_type=1)  # 1 represents Gantt chart view
+    # Iterate through the date column and convert the dates
+    # for row in ws.iter_rows(min_row=8, values_only=True):
+    #     date_str = row[4]  # Assuming the date column is in the second (B) column
+    #     if date_str is not None:
+            
+    #         # date_obj = datetime.strptime(str(date_str), '%d/%m/%Y')
+    #         new_date_str = convert_to_iso_format(date_str)
+    #         print(new_date_str)
+    #         cell = ws.cell(row=row[0], column=5)  # Assuming the date column is in the second (B) column
+    #         cell.value = new_date_str
+            # row[4] = new_date_st
 
-    # Display the Gantt chart view
-    view.Apply()
+    # Assuming the date column is in the second (B) column
+    date_column = ws['E']
 
-    # Save the project as a file
-    project.SaveAs("GanttChart.mpp")
+    # Iterate through the date column and convert the dates
+    for cell in date_column[1:]:
+        date_str = cell.value
+        if date_str is not None:
+            new_date_str = convert_to_iso_format(date_str)
+            if new_date_str is not None:
+                print(new_date_str)
+                cell.value = new_date_str
+            else:
+                print('error')
+        else:
+            print('empty')
 
-    # Close the project and the application
-    project.Close()
-    app.Quit()
+    # Save the changes back to the same Excel file
+    wb.save(input_file)
 
-# Call the function to create the Gantt chart
-create_gantt_chart()
+if __name__ == "__main__":
+    # Replace 'input.xlsx' with the name of your input Excel file.
+    convert_date_format("test.xlsx")
